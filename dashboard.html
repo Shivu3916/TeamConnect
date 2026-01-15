@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TeamConnect</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="dark-theme">
+    <nav class="navbar">
+        <div class="nav-container">
+            <img src="logo.png" alt="TeamConnect" class="nav-logo">
+            <div class="nav-search">
+                <span>🔍</span>
+                <input type="text" placeholder="Search projects...">
+            </div>
+            <div class="nav-items">
+                <a href="dashboard.html" class="nav-item active"><span>🏠</span> Home</a>
+                <a href="team-details.html" class="nav-item"><span>👥</span> Team</a>
+                <a href="#" class="nav-item" id="logoutBtn"><span>🚪</span> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="profile-card">
+                <div class="profile-cover"></div>
+                <div class="profile-avatar" id="userAvatar">U</div>
+                <h3 id="userName">User</h3>
+                <p id="userSection">Section A</p>
+                <div class="stats">
+                    <div><span>Projects</span><strong id="projectCount">0</strong></div>
+                    <div><span>Team</span><strong id="teamCount">0</strong></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="feed">
+            <div class="create-post-card">
+                <div class="create-post" onclick="openModal()">
+                    <div class="avatar" id="postAvatar">U</div>
+                    <div class="input-placeholder">Share your project...</div>
+                </div>
+                <div class="post-actions">
+                    <button onclick="openModal()">📁 Upload Project</button>
+                    <button onclick="window.location.href='team-details.html'">👥 Update Team</button>
+                </div>
+            </div>
+
+            <div id="feedPosts" class="feed-posts">
+                <!-- Posts will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content scale-in">
+            <div class="modal-header">
+                <h3>Upload Project</h3>
+                <button onclick="closeModal()">×</button>
+            </div>
+            <form id="uploadForm">
+                <input type="text" id="projectTitle" placeholder="Project Title" required>
+                <textarea id="projectDesc" placeholder="Description" required></textarea>
+                <div class="file-upload" onclick="document.getElementById('htmlFile').click()">
+                    <input type="file" id="htmlFile" accept=".html" required hidden>
+                    <span>📄</span>
+                    <p>Upload HTML File</p>
+                    <small id="htmlFileName"></small>
+                </div>
+                <div class="file-upload" onclick="document.getElementById('logoFile').click()">
+                    <input type="file" id="logoFile" accept="image/*" hidden>
+                    <span>🖼️</span>
+                    <p>Upload Logo (Optional)</p>
+                    <small id="logoFileName"></small>
+                </div>
+                <button type="submit" class="btn-primary" id="uploadBtn">Upload</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        initializeFirebase();
+
+        // Check Auth
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                loadProfile(user);
+                loadFeed();
+            }
+        });
+
+        async function loadProfile(user) {
+            try {
+                const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const data = userDoc.data();
+                    document.getElementById('userName').textContent = data.name;
+                    document.getElementById('userSection').textContent = `Section ${data.section}`;
+                    const initials = data.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                    document.getElementById('userAvatar').textContent = initials;
+                    document.getElementById('postAvatar').textContent = initials;
+
+                    localStorage.setItem('student_name', data.name);
+                    localStorage.setItem('student_section', data.section);
+                }
+
+                // Load Project Count
+                const projects = await firebase.firestore().collection('projects').where('userId', '==', user.uid).get();
+                document.getElementById('projectCount').textContent = projects.size;
+
+                // Load Team Count
+                const teamDoc = await firebase.firestore().collection('teams').doc(user.uid).get();
+                if (teamDoc.exists) {
+                    document.getElementById('teamCount').textContent = teamDoc.data().members.length;
+                    localStorage.setItem('team_name', teamDoc.data().teamName);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadFeed() {
+            const container = document.getElementById('feedPosts');
+            container.innerHTML = '<p class="loading">Loading projects...</p>';
+
+            try {
+                const snapshot = await firebase.firestore().collection('projects').orderBy('createdAt', 'desc').get();
+                container.innerHTML = '';
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="text-align:center; color:#666; margin-top:20px;">No projects found. Be the first to upload!</p>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const project = doc.data();
+                    const initials = (project.userName || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+
+                    const card = document.createElement('div');
+                    card.className = 'project-post-card card fade-in';
+                    card.style.background = 'white';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid #e0e0e0';
+                    card.style.padding = '16px';
+                    card.style.marginBottom = '12px';
+
+                    card.innerHTML = `
+                        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <div class="avatar" style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #0a66c2, #004182); display:flex; align-items:center; justify-content:center; color:white; font-weight:600;">${initials}</div>
+                            <div class="post-info">
+                                <strong style="display:block;">${project.userName}</strong>
+                                <span style="font-size:12px; color:#666;">${project.teamName || 'Team'} • ${project.userSection}</span>
+                            </div>
+                        </div>
+                        <h3 style="margin-bottom:8px;">${project.title}</h3>
+                        <p style="color:#666; margin-bottom:12px;">${project.description}</p>
+                        ${project.logoUrl ? `<img src="${project.logoUrl}" style="max-width:100%; border-radius:4px; margin-bottom:12px;">` : ''}
+                        <div class="post-actions-row" style="border-top:1px solid #e0e0e0; padding-top:12px;">
+                            <button style="padding:8px 16px; background:#0a66c2; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="window.open('${project.htmlUrl}')">View Project</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<p>Error loading feed.</p>';
+            }
+        }
+
+        // Modal Logic
+        function openModal() { document.getElementById('uploadModal').classList.add('active'); }
+        function closeModal() { document.getElementById('uploadModal').classList.remove('active'); }
+
+        document.getElementById('htmlFile').addEventListener('change', e => {
+            document.getElementById('htmlFileName').textContent = e.target.files[0] ? `✓ ${e.target.files[0].name}` : '';
+        });
+        document.getElementById('logoFile').addEventListener('change', e => {
+            document.getElementById('logoFileName').textContent = e.target.files[0] ? `✓ ${e.target.files[0].name}` : '';
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('uploadBtn');
+            const user = firebase.auth().currentUser;
+
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+
+            const title = document.getElementById('projectTitle').value;
+            const desc = document.getElementById('projectDesc').value;
+            const hFile = document.getElementById('htmlFile').files[0];
+            const lFile = document.getElementById('logoFile').files[0];
+
+            try {
+                const hRef = firebase.storage().ref(`projects/${user.uid}/${Date.now()}_${hFile.name}`);
+                await hRef.put(hFile);
+                const hUrl = await hRef.getDownloadURL();
+
+                let lUrl = null;
+                if (lFile) {
+                    const lRef = firebase.storage().ref(`logos/${user.uid}/${Date.now()}_${lFile.name}`);
+                    await lRef.put(lFile);
+                    lUrl = await lRef.getDownloadURL();
+                }
+
+                await firebase.firestore().collection('projects').add({
+                    userId: user.uid,
+                    userName: localStorage.getItem('student_name'),
+                    userSection: localStorage.getItem('student_section'),
+                    teamName: localStorage.getItem('team_name') || 'Team',
+                    title: title,
+                    description: desc,
+                    htmlUrl: hUrl,
+                    logoUrl: lUrl,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closeModal();
+                loadFeed();
+                loadProfile(user);
+                alert('Project uploaded successfully!');
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Upload';
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (confirm('Logout?')) {
+                await firebase.auth().signOut();
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

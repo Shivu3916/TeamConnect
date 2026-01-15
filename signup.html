@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeamConnect - Sign Up</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            width: 420px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .logo-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-header img {
+            width: 180px;
+            height: auto;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 5px 15px rgba(59, 130, 246, 0.3));
+        }
+
+        h2 {
+            color: #60a5fa;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        p {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        input::placeholder {
+            color: #64748b;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error {
+            color: #f87171;
+            font-size: 0.85rem;
+            margin-top: -15px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .success {
+            color: #4ade80;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .login-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .login-link a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .login-link a:hover {
+            color: #93c5fd;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #93c5fd;
+        }
+
+        .password-hint {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: -15px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                width: 100%;
+                padding: 30px 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="logo-header">
+            <img src="logo.png" alt="TeamConnect Logo">
+        </div>
+
+        <h2>Create Account</h2>
+        <p>Join TeamConnect today</p>
+
+        <form id="signupForm">
+            <label>Student Name</label>
+            <input type="text" id="name" placeholder="e.g., Shivu" required>
+            <span id="name-error" class="error"></span>
+
+            <label>Section</label>
+            <select id="section" required>
+                <option value="">Select Section</option>
+                <option>A</option>
+                <option>B</option>
+                <option>C</option>
+                <option>D</option>
+                <option>E</option>
+                <option>F</option>
+            </select>
+
+            <label>Email</label>
+            <input type="email" id="email" placeholder="example@gmail.com" required>
+            <span id="email-error" class="error"></span>
+
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Create a password" required>
+            <p class="password-hint">At least 6 characters</p>
+            <span id="password-error" class="error"></span>
+
+            <label>Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Re-enter password" required>
+            <span id="confirm-error" class="error"></span>
+
+            <button type="submit" id="signupBtn">Create Account</button>
+        </form>
+
+        <div id="successMsg" class="success"></div>
+
+        <p class="login-link">
+            Already have an account? <a href="login.html">Login here</a>
+        </p>
+
+        <a href="index.html" class="back-link">← Back to Home</a>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        // Initialize Firebase
+        initializeFirebase();
+
+        // Form submission
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Clear previous errors
+            document.getElementById('name-error').textContent = '';
+            document.getElementById('email-error').textContent = '';
+            document.getElementById('password-error').textContent = '';
+            document.getElementById('confirm-error').textContent = '';
+            document.getElementById('successMsg').textContent = '';
+
+            const name = document.getElementById('name').value.trim();
+            const section = document.getElementById('section').value;
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate name (letters and spaces only)
+            const namePattern = /^[A-Za-z ]+$/;
+            if (!namePattern.test(name)) {
+                document.getElementById('name-error').textContent = 'Name must contain only alphabets.';
+                return;
+            }
+
+            // Validate email
+            if (!email.includes('@')) {
+                document.getElementById('email-error').textContent = 'Enter a valid email.';
+                return;
+            }
+
+            // Validate section
+            if (!section) {
+                alert('Please select a section');
+                return;
+            }
+
+            // Validate password length
+            if (password.length < 6) {
+                document.getElementById('password-error').textContent = 'Password must be at least 6 characters.';
+                return;
+            }
+
+            // Validate password match
+            if (password !== confirmPassword) {
+                document.getElementById('confirm-error').textContent = 'Passwords do not match.';
+                return;
+            }
+
+            // Disable button
+            const signupBtn = document.getElementById('signupBtn');
+            signupBtn.disabled = true;
+            signupBtn.textContent = 'Creating Account...';
+
+            try {
+                // Create user with Firebase Authentication
+                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Save user profile to Firestore
+                await firebase.firestore().collection('users').doc(user.uid).set({
+                    name: name,
+                    email: email,
+                    section: section,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Show success message
+                document.getElementById('successMsg').textContent = '✓ Account created successfully! Redirecting to login...';
+
+                // Redirect to login after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Signup error:', error);
+                signupBtn.disabled = false;
+                signupBtn.textContent = 'Create Account';
+
+                // Handle specific errors
+                if (error.code === 'auth/email-already-in-use') {
+                    document.getElementById('email-error').textContent = 'Email already registered. Please login.';
+                } else if (error.code === 'auth/invalid-email') {
+                    document.getElementById('email-error').textContent = 'Invalid email format.';
+                } else if (error.code === 'auth/weak-password') {
+                    document.getElementById('password-error').textContent = 'Password is too weak.';
+                } else {
+                    alert('Signup failed: ' + error.message);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

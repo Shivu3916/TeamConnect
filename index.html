@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeamConnect - Collaborate & Share</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="dark-theme">
+    <div class="particles" id="particles"></div>
+
+    <div class="landing-container">
+        <div class="logo-container fade-in-down">
+            <img src="logo.png" alt="TeamConnect" class="landing-logo">
+        </div>
+
+        <h1 class="fade-in-up delay-1">Welcome to TeamConnect</h1>
+        <p class="tagline fade-in-up delay-2">Collaborate. Upload. Succeed.</p>
+        <p class="description fade-in-up delay-3">
+            The ultimate platform for teams to collaborate and manage their projects.
+            Upload files, track progress, and work together seamlessly in the cloud.
+        </p>
+
+        <a href="login.html" class="cta-button fade-in-up delay-4">Get Started →</a>
+
+        <div class="features fade-in-up delay-5">
+            <div class="feature">
+                <div class="feature-icon">🔐</div>
+                <h3>Secure Login</h3>
+                <p>Protected authentication system to keep your data safe</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">👥</div>
+                <h3>Team Management</h3>
+                <p>Organize your team members and collaborate effectively</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">☁️</div>
+                <h3>Cloud Storage</h3>
+                <p>Upload and access your project files from anywhere</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <h3>Project Dashboard</h3>
+                <p>Track and manage all your projects in one place</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create animated particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            particlesContainer.appendChild(particle);
+        }
+    </script>
+</body>
+
+</html>

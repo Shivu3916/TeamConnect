@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Details - TeamConnect</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            width: 100%;
+            max-width: 520px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .logo-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-header img {
+            width: 180px;
+            height: auto;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 5px 15px rgba(59, 130, 246, 0.3));
+        }
+
+        h2 {
+            color: #60a5fa;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        p {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        input::placeholder {
+            color: #64748b;
+        }
+
+        select option {
+            background: #1e293b;
+            color: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .member-entry {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        .member-entry h4 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .member-entry input,
+        .member-entry select {
+            margin-bottom: 12px;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #93c5fd;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 30px 25px;
+            }
+        }
+
+        /* Custom scrollbar for the card */
+        .card::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .card::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+        }
+
+        .card::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 10px;
+        }
+
+        .card::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.7);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="logo-header">
+            <img src="logo.png" alt="TeamConnect Logo">
+        </div>
+
+        <h2>Team Details</h2>
+        <p>Enter your team information</p>
+
+        <form id="teamForm">
+            <label>Team Name</label>
+            <input type="text" id="teamName" placeholder="e.g., Tech Innovators" required>
+
+            <label>Number of Members</label>
+            <select id="memberCount" required onchange="generateMemberFields()">
+                <option value="">Select number of members</option>
+                <option value="4">4 Members</option>
+                <option value="5">5 Members</option>
+                <option value="6">6 Members</option>
+            </select>
+
+            <div id="memberFields"></div>
+
+            <button type="submit" id="saveTeamBtn">Proceed to Dashboard</button>
+        </form>
+
+        <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        initializeFirebase();
+
+        function generateMemberFields() {
+            const count = parseInt(document.getElementById('memberCount').value);
+            const container = document.getElementById('memberFields');
+            container.innerHTML = '';
+
+            if (!count) return;
+
+            for (let i = 1; i <= count; i++) {
+                const memberDiv = document.createElement('div');
+                memberDiv.className = 'member-entry';
+                memberDiv.innerHTML = `
+                    <h4>Member ${i}</h4>
+                    <label>Name</label>
+                    <input type="text" id="memberName${i}" placeholder="Full Name" required>
+                    <label>Roll Number</label>
+                    <input type="text" id="memberRoll${i}" placeholder="Roll Number" required>
+                    <label>Gender</label>
+                    <select id="memberGender${i}" required>
+                        <option value="">Select Gender</option>
+                        <option>Male</option>
+                        <option>Female</option>
+                    </select>
+                `;
+                container.appendChild(memberDiv);
+            }
+        }
+
+        document.getElementById('teamForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveTeamBtn');
+            const teamName = document.getElementById('teamName').value.trim();
+            const count = parseInt(document.getElementById('memberCount').value);
+
+            const members = [];
+            for (let i = 1; i <= count; i++) {
+                members.push({
+                    name: document.getElementById(`memberName${i}`).value,
+                    roll: document.getElementById(`memberRoll${i}`).value,
+                    gender: document.getElementById(`memberGender${i}`).value
+                });
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    alert('You must be logged in to save team details.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Save to Firestore
+                await firebase.firestore().collection('teams').doc(user.uid).set({
+                    userId: user.uid,
+                    teamName: teamName,
+                    members: members,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert('✓ Team details saved successfully!');
+                window.location.href = 'dashboard.html';
+            } catch (error) {
+                alert('Error saving team: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = 'Proceed to Dashboard';
+            }
+        });
+
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) window.location.href = 'login.html';
+        });
+    </script>
+</body>
+
+</html>
