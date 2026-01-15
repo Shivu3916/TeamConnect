@@ -17,9 +17,9 @@
                 <input type="text" placeholder="Search projects...">
             </div>
             <div class="nav-items">
-                <a href="dashboard.html" class="nav-item active"><span>🏠</span> Home</a>
-                <a href="team-details.html" class="nav-item"><span>👥</span> Team</a>
-                <a href="#" class="nav-item" id="logoutBtn"><span>🚪</span> Logout</a>
+                <a href="dashboard.html" class="nav-item active" title="Home">🏠</a>
+                <a href="team-details.html" class="nav-item" title="Team">👥</a>
+                <a href="#" class="nav-item" id="logoutBtn" title="Logout">🚪</a>
             </div>
         </div>
     </nav>
@@ -28,9 +28,10 @@
         <aside class="sidebar">
             <div class="profile-card">
                 <div class="profile-cover"></div>
-                <div class="profile-avatar" id="userAvatar">U</div>
+                <div class="profile-avatar" id="userAvatar" onclick="openProfilePhotoModal()"
+                    title="Click to change profile photo">U</div>
                 <h3 id="userName">User</h3>
-                <p id="userSection">Section A</p>
+                <p id="userRollNo">Roll No</p>
                 <div class="stats">
                     <div><span>Projects</span><strong id="projectCount">0</strong></div>
                     <div><span>Team</span><strong id="teamCount">0</strong></div>
@@ -78,7 +79,42 @@
                     <p>Upload Logo (Optional)</p>
                     <small id="logoFileName"></small>
                 </div>
+
+                <!-- Progress Indicator -->
+                <div id="uploadProgress" style="display: none; margin: 16px 0;">
+                    <div
+                        style="background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 8px; margin-bottom: 8px;">
+                        <div id="progressBar"
+                            style="background: linear-gradient(135deg, #0a66c2, #004182); height: 100%; width: 0%; transition: width 0.3s;">
+                        </div>
+                    </div>
+                    <p id="uploadStatus" style="font-size: 14px; color: #666; text-align: center;"></p>
+                </div>
+
                 <button type="submit" class="btn-primary" id="uploadBtn">Upload</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Photo Upload Modal -->
+    <div id="profilePhotoModal" class="modal">
+        <div class="modal-content scale-in">
+            <div class="modal-header">
+                <h3>Update Profile Photo</h3>
+                <button onclick="closeProfilePhotoModal()">×</button>
+            </div>
+            <form id="profilePhotoForm" style="padding: 20px;">
+                <div class="file-upload" onclick="document.getElementById('profilePhotoFile').click()">
+                    <input type="file" id="profilePhotoFile" accept="image/*" required hidden>
+                    <span>📷</span>
+                    <p>Upload Profile Photo</p>
+                    <small id="photoFileName"></small>
+                </div>
+                <div id="photoPreview" style="display: none; text-align: center; margin-bottom: 15px;">
+                    <img id="previewImage"
+                        style="max-width: 200px; max-height: 200px; border-radius: 50%; object-fit: cover;">
+                </div>
+                <button type="submit" class="btn-primary" id="uploadPhotoBtn">Upload Photo</button>
             </form>
         </div>
     </div>
@@ -107,13 +143,23 @@
                 if (userDoc.exists) {
                     const data = userDoc.data();
                     document.getElementById('userName').textContent = data.name;
-                    document.getElementById('userSection').textContent = `Section ${data.section}`;
+                    document.getElementById('userRollNo').textContent = data.rollNo || 'No Roll No';
+
                     const initials = data.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-                    document.getElementById('userAvatar').textContent = initials;
-                    document.getElementById('postAvatar').textContent = initials;
+                    const avatarEl = document.getElementById('userAvatar');
+                    const postAvatarEl = document.getElementById('postAvatar');
+
+                    // Display profile photo if available
+                    if (data.photoURL) {
+                        avatarEl.innerHTML = `<img src="${data.photoURL}" alt="Profile">`;
+                        postAvatarEl.innerHTML = `<img src="${data.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    } else {
+                        avatarEl.textContent = initials;
+                        postAvatarEl.textContent = initials;
+                    }
 
                     localStorage.setItem('student_name', data.name);
-                    localStorage.setItem('student_section', data.section);
+                    localStorage.setItem('student_rollno', data.rollNo || '');
                 }
 
                 // Load Project Count
@@ -193,10 +239,20 @@
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('uploadBtn');
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('uploadStatus');
             const user = firebase.auth().currentUser;
+
+            if (!user) {
+                alert('You must be logged in to upload projects.');
+                return;
+            }
 
             btn.disabled = true;
             btn.textContent = 'Uploading...';
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
 
             const title = document.getElementById('projectTitle').value;
             const desc = document.getElementById('projectDesc').value;
@@ -204,21 +260,57 @@
             const lFile = document.getElementById('logoFile').files[0];
 
             try {
-                const hRef = firebase.storage().ref(`projects/${user.uid}/${Date.now()}_${hFile.name}`);
-                await hRef.put(hFile);
-                const hUrl = await hRef.getDownloadURL();
+                // Upload HTML file with progress
+                statusText.textContent = 'Uploading HTML file...';
+                progressBar.style.width = '20%';
 
+                const hRef = firebase.storage().ref(`projects/${user.uid}/${Date.now()}_${hFile.name}`);
+                const hUploadTask = hRef.put(hFile);
+
+                await new Promise((resolve, reject) => {
+                    hUploadTask.on('state_changed',
+                        (snapshot) => {
+                            const progress = 20 + (snapshot.bytesTransferred / snapshot.totalBytes) * 30;
+                            progressBar.style.width = progress + '%';
+                        },
+                        (error) => reject(error),
+                        () => resolve()
+                    );
+                });
+
+                const hUrl = await hRef.getDownloadURL();
+                progressBar.style.width = '50%';
+
+                // Upload logo if provided
                 let lUrl = null;
                 if (lFile) {
+                    statusText.textContent = 'Uploading logo...';
+                    progressBar.style.width = '60%';
+
                     const lRef = firebase.storage().ref(`logos/${user.uid}/${Date.now()}_${lFile.name}`);
-                    await lRef.put(lFile);
+                    const lUploadTask = lRef.put(lFile);
+
+                    await new Promise((resolve, reject) => {
+                        lUploadTask.on('state_changed',
+                            (snapshot) => {
+                                const progress = 60 + (snapshot.bytesTransferred / snapshot.totalBytes) * 20;
+                                progressBar.style.width = progress + '%';
+                            },
+                            (error) => reject(error),
+                            () => resolve()
+                        );
+                    });
+
                     lUrl = await lRef.getDownloadURL();
                 }
+                progressBar.style.width = '80%';
 
+                // Save to Firestore
+                statusText.textContent = 'Saving project details...';
                 await firebase.firestore().collection('projects').add({
                     userId: user.uid,
-                    userName: localStorage.getItem('student_name'),
-                    userSection: localStorage.getItem('student_section'),
+                    userName: localStorage.getItem('student_name') || 'Unknown',
+                    userSection: localStorage.getItem('student_section') || 'N/A',
                     teamName: localStorage.getItem('team_name') || 'Team',
                     title: title,
                     description: desc,
@@ -227,15 +319,110 @@
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                progressBar.style.width = '100%';
+                statusText.textContent = 'Upload complete!';
+
+                // Wait a moment to show completion
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Reset form
+                document.getElementById('uploadForm').reset();
+                document.getElementById('htmlFileName').textContent = '';
+                document.getElementById('logoFileName').textContent = '';
+
                 closeModal();
                 loadFeed();
                 loadProfile(user);
-                alert('Project uploaded successfully!');
+                alert('✅ Project uploaded successfully!');
             } catch (err) {
-                alert('Upload failed: ' + err.message);
+                console.error('Upload error:', err);
+                progressBar.style.width = '0%';
+                statusText.textContent = '';
+
+                let errorMsg = 'Upload failed. ';
+                if (err.code === 'storage/unauthorized') {
+                    errorMsg += 'You do not have permission to upload files. Please check Firebase Storage rules.';
+                } else if (err.code === 'storage/canceled') {
+                    errorMsg += 'Upload was canceled.';
+                } else if (err.code === 'storage/unknown') {
+                    errorMsg += 'An unknown error occurred. Please try again.';
+                } else {
+                    errorMsg += err.message;
+                }
+
+                alert('❌ ' + errorMsg);
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Upload';
+                progressDiv.style.display = 'none';
+            }
+        });
+
+        // Profile Photo Modal Functions
+        function openProfilePhotoModal() {
+            document.getElementById('profilePhotoModal').classList.add('active');
+        }
+
+        function closeProfilePhotoModal() {
+            document.getElementById('profilePhotoModal').classList.remove('active');
+            document.getElementById('profilePhotoForm').reset();
+            document.getElementById('photoFileName').textContent = '';
+            document.getElementById('photoPreview').style.display = 'none';
+        }
+
+        // Preview photo before upload
+        document.getElementById('profilePhotoFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('photoFileName').textContent = `✓ ${file.name}`;
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    document.getElementById('previewImage').src = event.target.result;
+                    document.getElementById('photoPreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Upload profile photo
+        document.getElementById('profilePhotoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('uploadPhotoBtn');
+            const user = firebase.auth().currentUser;
+            const file = document.getElementById('profilePhotoFile').files[0];
+
+            if (!user || !file) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+
+            try {
+                // Upload to Firebase Storage
+                const photoRef = firebase.storage().ref(`profile_photos/${user.uid}/${Date.now()}_${file.name}`);
+                await photoRef.put(file);
+                const photoURL = await photoRef.getDownloadURL();
+
+                // Update Firestore user document
+                await firebase.firestore().collection('users').doc(user.uid).update({
+                    photoURL: photoURL
+                });
+
+                // Update UI
+                const avatarEl = document.getElementById('userAvatar');
+                const postAvatarEl = document.getElementById('postAvatar');
+                avatarEl.innerHTML = `<img src="${photoURL}" alt="Profile">`;
+                postAvatarEl.innerHTML = `<img src="${photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+
+                closeProfilePhotoModal();
+                alert('✅ Profile photo updated successfully!');
+            } catch (err) {
+                console.error('Photo upload error:', err);
+                alert('❌ Failed to upload photo: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Upload Photo';
             }
         });
 

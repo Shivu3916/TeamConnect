@@ -258,7 +258,7 @@
             for (let i = 1; i <= count; i++) {
                 members.push({
                     name: document.getElementById(`memberName${i}`).value,
-                    roll: document.getElementById(`memberRoll${i}`).value,
+                    rollNo: document.getElementById(`memberRoll${i}`).value.toUpperCase(),
                     gender: document.getElementById(`memberGender${i}`).value
                 });
             }

@@ -195,16 +195,10 @@
             <input type="text" id="name" placeholder="e.g., Shivu" required>
             <span id="name-error" class="error"></span>
 
-            <label>Section</label>
-            <select id="section" required>
-                <option value="">Select Section</option>
-                <option>A</option>
-                <option>B</option>
-                <option>C</option>
-                <option>D</option>
-                <option>E</option>
-                <option>F</option>
-            </select>
+            <label>Roll No</label>
+            <input type="text" id="rollNo" placeholder="e.g., 1CR21CS001" required pattern="[A-Za-z0-9]+"
+                title="Enter your roll number">
+            <span id="rollno-error" class="error"></span>
 
             <label>Email</label>
             <input type="email" id="email" placeholder="example@gmail.com" required>
@@ -247,13 +241,14 @@
 
             // Clear previous errors
             document.getElementById('name-error').textContent = '';
+            document.getElementById('rollno-error').textContent = '';
             document.getElementById('email-error').textContent = '';
             document.getElementById('password-error').textContent = '';
             document.getElementById('confirm-error').textContent = '';
             document.getElementById('successMsg').textContent = '';
 
             const name = document.getElementById('name').value.trim();
-            const section = document.getElementById('section').value;
+            const rollNo = document.getElementById('rollNo').value.trim().toUpperCase();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
@@ -265,15 +260,15 @@
                 return;
             }
 
-            // Validate email
-            if (!email.includes('@')) {
-                document.getElementById('email-error').textContent = 'Enter a valid email.';
+            // Validate roll number
+            if (!rollNo || rollNo.length < 3) {
+                document.getElementById('rollno-error').textContent = 'Enter a valid roll number.';
                 return;
             }
 
-            // Validate section
-            if (!section) {
-                alert('Please select a section');
+            // Validate email
+            if (!email.includes('@')) {
+                document.getElementById('email-error').textContent = 'Enter a valid email.';
                 return;
             }
 
@@ -299,16 +294,53 @@
                 const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;
 
+                // Check if there's an existing team with this roll number
+                let existingTeamId = null;
+                let existingTeamName = null;
+
+                const teamsSnapshot = await firebase.firestore().collection('teams').get();
+                teamsSnapshot.forEach(doc => {
+                    const teamData = doc.data();
+                    if (teamData.members && Array.isArray(teamData.members)) {
+                        const rollNumbers = teamData.members.map(m => m.rollNo ? m.rollNo.toUpperCase() : '');
+                        if (rollNumbers.includes(rollNo)) {
+                            existingTeamId = doc.id;
+                            existingTeamName = teamData.teamName;
+                        }
+                    }
+                });
+
                 // Save user profile to Firestore
                 await firebase.firestore().collection('users').doc(user.uid).set({
                     name: name,
                     email: email,
-                    section: section,
+                    rollNo: rollNo,
+                    teamId: existingTeamId,
+                    teamName: existingTeamName,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                // If user was added to existing team, update the team document
+                if (existingTeamId) {
+                    const teamRef = firebase.firestore().collection('teams').doc(existingTeamId);
+                    const teamDoc = await teamRef.get();
+                    if (teamDoc.exists) {
+                        const members = teamDoc.data().members || [];
+                        // Update the member with this roll number to include userId
+                        const updatedMembers = members.map(m => {
+                            if (m.rollNo && m.rollNo.toUpperCase() === rollNo) {
+                                return { ...m, userId: user.uid, name: name };
+                            }
+                            return m;
+                        });
+                        await teamRef.update({ members: updatedMembers });
+                    }
+                }
+
                 // Show success message
-                document.getElementById('successMsg').textContent = '✓ Account created successfully! Redirecting to login...';
+                document.getElementById('successMsg').textContent = existingTeamId
+                    ? `✓ Account created! You've been added to team "${existingTeamName}". Redirecting...`
+                    : '✓ Account created successfully! Redirecting to login...';
 
                 // Redirect to login after 2 seconds
                 setTimeout(() => {
