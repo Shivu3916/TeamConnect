@@ -17,9 +17,26 @@
                 <input type="text" placeholder="Search projects...">
             </div>
             <div class="nav-items">
-                <a href="dashboard.html" class="nav-item active" title="Home">🏠</a>
-                <a href="team-details.html" class="nav-item" title="Team">👥</a>
-                <a href="#" class="nav-item" id="logoutBtn" title="Logout">🚪</a>
+                <a href="dashboard.html" class="nav-item active" title="Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                    </svg>
+                </a>
+                <a href="team-view.html" class="nav-item" title="Team">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path
+                            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                    </svg>
+                </a>
+                <a href="#" class="nav-item" id="logoutBtn" title="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path
+                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                </a>
             </div>
         </div>
     </nav>
@@ -32,6 +49,10 @@
                     title="Click to change profile photo">U</div>
                 <h3 id="userName">User</h3>
                 <p id="userRollNo">Roll No</p>
+                <div class="profile-bio">
+                    <p id="userBio" class="bio-text">Add a bio to tell others about yourself...</p>
+                    <button class="edit-bio-btn" onclick="openBioModal()">✏️ Edit Bio</button>
+                </div>
                 <div class="stats">
                     <div><span>Projects</span><strong id="projectCount">0</strong></div>
                     <div><span>Team</span><strong id="teamCount">0</strong></div>
@@ -119,59 +140,118 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <!-- Bio Edit Modal -->
+    <div id="bioModal" class="modal">
+        <div class="modal-content scale-in">
+            <div class="modal-header">
+                <h3>Edit Bio</h3>
+                <button onclick="closeBioModal()">×</button>
+            </div>
+            <form id="bioForm" style="padding: 20px;">
+                <label style="color: #cbd5e1; margin-bottom: 8px; display: block;">About You</label>
+                <textarea id="bioText" maxlength="150" rows="4" placeholder="Write something about yourself..."
+                    style="resize: vertical;"></textarea>
+                <small id="bioCharCount" style="color: #94a3b8; display: block; margin-bottom: 15px;">0 / 150
+                    characters</small>
+                <button type="submit" class="btn-primary" id="saveBioBtn">Save Bio</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
+    <script src="supabase-config.js"></script>
     <script>
-        initializeFirebase();
+        // Wait for Supabase SDK to load
+        window.addEventListener('load', function () {
+            if (typeof window.supabase === 'undefined') {
+                console.error('❌ Supabase SDK failed to load!');
+                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
+                return;
+            }
+            initializeSupabase();
+        });
 
         // Check Auth
-        firebase.auth().onAuthStateChanged(user => {
-            if (!user) {
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (!session) {
                 window.location.href = 'login.html';
             } else {
-                loadProfile(user);
+                loadProfile(session.user);
                 loadFeed();
             }
         });
 
+        // Initial check
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+            } else {
+                loadProfile(session.user);
+                loadFeed();
+            }
+        })();
+
         async function loadProfile(user) {
             try {
-                const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
-                    const data = userDoc.data();
-                    document.getElementById('userName').textContent = data.name;
-                    document.getElementById('userRollNo').textContent = data.rollNo || 'No Roll No';
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
 
-                    const initials = data.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                if (!userError && userData) {
+                    document.getElementById('userName').textContent = userData.full_name;
+                    document.getElementById('userRollNo').textContent = userData.email;
+
+                    // Display bio
+                    const bioEl = document.getElementById('userBio');
+                    if (userData.bio && userData.bio.trim()) {
+                        bioEl.textContent = userData.bio;
+                        bioEl.style.fontStyle = 'normal';
+                    } else {
+                        bioEl.textContent = 'Add a bio to tell others about yourself...';
+                        bioEl.style.fontStyle = 'italic';
+                    }
+
+                    const initials = userData.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
                     const avatarEl = document.getElementById('userAvatar');
                     const postAvatarEl = document.getElementById('postAvatar');
 
                     // Display profile photo if available
-                    if (data.photoURL) {
-                        avatarEl.innerHTML = `<img src="${data.photoURL}" alt="Profile">`;
-                        postAvatarEl.innerHTML = `<img src="${data.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    if (userData.profile_photo_url) {
+                        avatarEl.innerHTML = `<img src="${userData.profile_photo_url}" alt="Profile">`;
+                        postAvatarEl.innerHTML = `<img src="${userData.profile_photo_url}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                     } else {
                         avatarEl.textContent = initials;
                         postAvatarEl.textContent = initials;
                     }
 
-                    localStorage.setItem('student_name', data.name);
-                    localStorage.setItem('student_rollno', data.rollNo || '');
+                    localStorage.setItem('student_name', userData.full_name);
+                    localStorage.setItem('student_email', userData.email);
                 }
 
                 // Load Project Count
-                const projects = await firebase.firestore().collection('projects').where('userId', '==', user.uid).get();
-                document.getElementById('projectCount').textContent = projects.size;
+                const { data: projects, error: projectsError } = await supabase
+                    .from('projects')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.id);
 
-                // Load Team Count
-                const teamDoc = await firebase.firestore().collection('teams').doc(user.uid).get();
-                if (teamDoc.exists) {
-                    document.getElementById('teamCount').textContent = teamDoc.data().members.length;
-                    localStorage.setItem('team_name', teamDoc.data().teamName);
+                if (!projectsError) {
+                    const { count } = await supabase
+                        .from('projects')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('user_id', user.id);
+                    document.getElementById('projectCount').textContent = count || 0;
                 }
+
+                // Load Team Count (count team_members where user_id matches)
+                const { count: teamMemberCount } = await supabase
+                    .from('team_members')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.id);
+
+                document.getElementById('teamCount').textContent = teamMemberCount || 0;
             } catch (e) {
                 console.error(e);
             }
@@ -182,41 +262,59 @@
             container.innerHTML = '<p class="loading">Loading projects...</p>';
 
             try {
-                const snapshot = await firebase.firestore().collection('projects').orderBy('createdAt', 'desc').get();
+                const { data: projects, error } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
                 container.innerHTML = '';
 
-                if (snapshot.empty) {
+                if (!projects || projects.length === 0) {
                     container.innerHTML = '<p style="text-align:center; color:#666; margin-top:20px;">No projects found. Be the first to upload!</p>';
                     return;
                 }
 
-                snapshot.forEach(doc => {
-                    const project = doc.data();
-                    const initials = (project.userName || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                projects.forEach(project => {
+                    const initials = (project.user_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
                     const card = document.createElement('div');
                     card.className = 'project-post-card card fade-in';
-                    card.style.background = 'white';
-                    card.style.borderRadius = '8px';
-                    card.style.border = '1px solid #e0e0e0';
-                    card.style.padding = '16px';
-                    card.style.marginBottom = '12px';
+                    card.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
+                    card.style.borderRadius = '12px';
+                    card.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+                    card.style.padding = '20px';
+                    card.style.marginBottom = '16px';
+                    card.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.animation = 'fadeInUp 0.5s ease';
 
                     card.innerHTML = `
                         <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                            <div class="avatar" style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #0a66c2, #004182); display:flex; align-items:center; justify-content:center; color:white; font-weight:600;">${initials}</div>
+                            <div class="avatar" style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #3b82f6, #2563eb); display:flex; align-items:center; justify-content:center; color:white; font-weight:600;">${initials}</div>
                             <div class="post-info">
-                                <strong style="display:block;">${project.userName}</strong>
-                                <span style="font-size:12px; color:#666;">${project.teamName || 'Team'} • ${project.userSection}</span>
+                                <strong style="display:block; color:#e2e8f0;">${project.user_name}</strong>
+                                <span style="font-size:12px; color:#94a3b8;">${project.team_name || 'Team'} • ${project.user_section || ''}</span>
                             </div>
                         </div>
-                        <h3 style="margin-bottom:8px;">${project.title}</h3>
-                        <p style="color:#666; margin-bottom:12px;">${project.description}</p>
-                        ${project.logoUrl ? `<img src="${project.logoUrl}" style="max-width:100%; border-radius:4px; margin-bottom:12px;">` : ''}
-                        <div class="post-actions-row" style="border-top:1px solid #e0e0e0; padding-top:12px;">
-                            <button style="padding:8px 16px; background:#0a66c2; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="window.open('${project.htmlUrl}')">View Project</button>
+                        <h3 style="margin-bottom:8px; color:#60a5fa;">${project.title}</h3>
+                        <p style="color:#cbd5e1; margin-bottom:12px;">${project.description}</p>
+                        ${project.logo_url ? `<img src="${project.logo_url}" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
+                        <div class="post-actions-row" style="border-top:1px solid rgba(59, 130, 246, 0.2); padding-top:12px;">
+                            <button style="padding:10px 20px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; transition: all 0.3s ease;" onclick="window.open('${project.html_url}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">View Project</button>
                         </div>
                     `;
+
+                    card.addEventListener('mouseenter', () => {
+                        card.style.transform = 'translateY(-4px)';
+                        card.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.3)';
+                    });
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = 'translateY(0)';
+                        card.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                    });
+
                     container.appendChild(card);
                 });
             } catch (e) {
@@ -242,7 +340,8 @@
             const progressDiv = document.getElementById('uploadProgress');
             const progressBar = document.getElementById('progressBar');
             const statusText = document.getElementById('uploadStatus');
-            const user = firebase.auth().currentUser;
+
+            const { data: { user } } = await supabase.auth.getUser();
 
             if (!user) {
                 alert('You must be logged in to upload projects.');
@@ -260,25 +359,24 @@
             const lFile = document.getElementById('logoFile').files[0];
 
             try {
-                // Upload HTML file with progress
+                // Upload HTML file
                 statusText.textContent = 'Uploading HTML file...';
                 progressBar.style.width = '20%';
 
-                const hRef = firebase.storage().ref(`projects/${user.uid}/${Date.now()}_${hFile.name}`);
-                const hUploadTask = hRef.put(hFile);
+                const htmlFileName = `${user.id}/${Date.now()}_${hFile.name}`;
+                const { data: htmlData, error: htmlError } = await supabase.storage
+                    .from('project-html')
+                    .upload(htmlFileName, hFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
 
-                await new Promise((resolve, reject) => {
-                    hUploadTask.on('state_changed',
-                        (snapshot) => {
-                            const progress = 20 + (snapshot.bytesTransferred / snapshot.totalBytes) * 30;
-                            progressBar.style.width = progress + '%';
-                        },
-                        (error) => reject(error),
-                        () => resolve()
-                    );
-                });
+                if (htmlError) throw htmlError;
 
-                const hUrl = await hRef.getDownloadURL();
+                const { data: { publicUrl: hUrl } } = supabase.storage
+                    .from('project-html')
+                    .getPublicUrl(htmlFileName);
+
                 progressBar.style.width = '50%';
 
                 // Upload logo if provided
@@ -287,37 +385,40 @@
                     statusText.textContent = 'Uploading logo...';
                     progressBar.style.width = '60%';
 
-                    const lRef = firebase.storage().ref(`logos/${user.uid}/${Date.now()}_${lFile.name}`);
-                    const lUploadTask = lRef.put(lFile);
+                    const logoFileName = `${user.id}/${Date.now()}_${lFile.name}`;
+                    const { data: logoData, error: logoError } = await supabase.storage
+                        .from('project-logos')
+                        .upload(logoFileName, lFile, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
 
-                    await new Promise((resolve, reject) => {
-                        lUploadTask.on('state_changed',
-                            (snapshot) => {
-                                const progress = 60 + (snapshot.bytesTransferred / snapshot.totalBytes) * 20;
-                                progressBar.style.width = progress + '%';
-                            },
-                            (error) => reject(error),
-                            () => resolve()
-                        );
-                    });
+                    if (logoError) throw logoError;
 
-                    lUrl = await lRef.getDownloadURL();
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('project-logos')
+                        .getPublicUrl(logoFileName);
+
+                    lUrl = publicUrl;
                 }
                 progressBar.style.width = '80%';
 
-                // Save to Firestore
+                // Save to database
                 statusText.textContent = 'Saving project details...';
-                await firebase.firestore().collection('projects').add({
-                    userId: user.uid,
-                    userName: localStorage.getItem('student_name') || 'Unknown',
-                    userSection: localStorage.getItem('student_section') || 'N/A',
-                    teamName: localStorage.getItem('team_name') || 'Team',
-                    title: title,
-                    description: desc,
-                    htmlUrl: hUrl,
-                    logoUrl: lUrl,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                const { error: dbError } = await supabase
+                    .from('projects')
+                    .insert({
+                        user_id: user.id,
+                        user_name: localStorage.getItem('student_name') || 'Unknown',
+                        user_section: localStorage.getItem('student_section') || 'N/A',
+                        team_name: localStorage.getItem('team_name') || 'Team',
+                        title: title,
+                        description: desc,
+                        html_url: hUrl,
+                        logo_url: lUrl
+                    });
+
+                if (dbError) throw dbError;
 
                 progressBar.style.width = '100%';
                 statusText.textContent = 'Upload complete!';
@@ -340,12 +441,10 @@
                 statusText.textContent = '';
 
                 let errorMsg = 'Upload failed. ';
-                if (err.code === 'storage/unauthorized') {
-                    errorMsg += 'You do not have permission to upload files. Please check Firebase Storage rules.';
-                } else if (err.code === 'storage/canceled') {
-                    errorMsg += 'Upload was canceled.';
-                } else if (err.code === 'storage/unknown') {
-                    errorMsg += 'An unknown error occurred. Please try again.';
+                if (err.message.includes('not allowed') || err.message.includes('permission')) {
+                    errorMsg += 'You do not have permission to upload files. Please check Supabase Storage policies.';
+                } else if (err.message.includes('already exists')) {
+                    errorMsg += 'File already exists. Please try again.';
                 } else {
                     errorMsg += err.message;
                 }
@@ -390,7 +489,7 @@
         document.getElementById('profilePhotoForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('uploadPhotoBtn');
-            const user = firebase.auth().currentUser;
+            const { data: { user } } = await supabase.auth.getUser();
             const file = document.getElementById('profilePhotoFile').files[0];
 
             if (!user || !file) return;
@@ -399,15 +498,28 @@
             btn.textContent = 'Uploading...';
 
             try {
-                // Upload to Firebase Storage
-                const photoRef = firebase.storage().ref(`profile_photos/${user.uid}/${Date.now()}_${file.name}`);
-                await photoRef.put(file);
-                const photoURL = await photoRef.getDownloadURL();
+                // Upload to Supabase Storage
+                const photoFileName = `${user.id}/${Date.now()}_${file.name}`;
+                const { data: photoData, error: uploadError } = await supabase.storage
+                    .from('profile-photos')
+                    .upload(photoFileName, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
 
-                // Update Firestore user document
-                await firebase.firestore().collection('users').doc(user.uid).update({
-                    photoURL: photoURL
-                });
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl: photoURL } } = supabase.storage
+                    .from('profile-photos')
+                    .getPublicUrl(photoFileName);
+
+                // Update database user document
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ profile_photo_url: photoURL })
+                    .eq('id', user.id);
+
+                if (updateError) throw updateError;
 
                 // Update UI
                 const avatarEl = document.getElementById('userAvatar');
@@ -426,10 +538,86 @@
             }
         });
 
+        // Bio Modal Functions
+        async function openBioModal() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('bio')
+                    .eq('id', user.id)
+                    .single();
+
+                if (!error && userData && userData.bio) {
+                    document.getElementById('bioText').value = userData.bio;
+                    updateBioCharCount();
+                }
+            } catch (err) {
+                console.error('Error loading bio:', err);
+            }
+
+            document.getElementById('bioModal').classList.add('active');
+        }
+
+        function closeBioModal() {
+            document.getElementById('bioModal').classList.remove('active');
+            document.getElementById('bioForm').reset();
+            document.getElementById('bioCharCount').textContent = '0 / 150 characters';
+        }
+
+        function updateBioCharCount() {
+            const bioText = document.getElementById('bioText').value;
+            document.getElementById('bioCharCount').textContent = `${bioText.length} / 150 characters`;
+        }
+
+        document.getElementById('bioText').addEventListener('input', updateBioCharCount);
+
+        document.getElementById('bioForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveBioBtn');
+            const { data: { user } } = await supabase.auth.getUser();
+            const bioText = document.getElementById('bioText').value.trim();
+
+            if (!user) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const { error } = await supabase
+                    .from('users')
+                    .update({ bio: bioText })
+                    .eq('id', user.id);
+
+                if (error) throw error;
+
+                // Update UI
+                const bioEl = document.getElementById('userBio');
+                if (bioText) {
+                    bioEl.textContent = bioText;
+                    bioEl.style.fontStyle = 'normal';
+                } else {
+                    bioEl.textContent = 'Add a bio to tell others about yourself...';
+                    bioEl.style.fontStyle = 'italic';
+                }
+
+                closeBioModal();
+                alert('✅ Bio updated successfully!');
+            } catch (err) {
+                console.error('Bio update error:', err);
+                alert('❌ Failed to update bio: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Bio';
+            }
+        });
+
         document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
             if (confirm('Logout?')) {
-                await firebase.auth().signOut();
+                await supabase.auth.signOut();
                 localStorage.clear();
                 window.location.href = 'index.html';
             }

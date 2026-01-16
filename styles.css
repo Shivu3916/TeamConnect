@@ -400,7 +400,8 @@ body {
 
 /* Dashboard */
 #dashboardPage {
-    background: #f3f2ef;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    min-height: 100vh;
 }
 
 .navbar {
@@ -575,6 +576,42 @@ body {
     font-size: 16px;
 }
 
+/* Profile Bio Section */
+.profile-bio {
+    padding: 15px;
+    border-top: 1px solid rgba(59, 130, 246, 0.2);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    margin-bottom: 0;
+}
+
+.bio-text {
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    font-style: italic;
+    min-height: 40px;
+}
+
+.edit-bio-btn {
+    width: 100%;
+    padding: 8px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.edit-bio-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-1px);
+}
+
 .feed {
     display: flex;
     flex-direction: column;
@@ -582,10 +619,18 @@ body {
 }
 
 .create-post-card {
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    padding: 16px;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease;
+}
+
+.create-post-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
 }
 
 .create-post {
@@ -594,6 +639,11 @@ body {
     align-items: center;
     margin-bottom: 12px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.create-post:hover {
+    opacity: 0.9;
 }
 
 .avatar {
@@ -611,32 +661,42 @@ body {
 .input-placeholder {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid #ccc;
+    border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 35px;
-    color: #666;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.6);
+    transition: all 0.3s ease;
+}
+
+.input-placeholder:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(15, 23, 42, 0.8);
 }
 
 .post-actions {
     display: flex;
     gap: 12px;
     padding-top: 12px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .post-actions button {
     flex: 1;
     padding: 10px;
-    background: none;
-    border: none;
-    color: #666;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
     font-weight: 600;
     cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
+    border-radius: 8px;
+    transition: all 0.3s ease;
 }
 
 .post-actions button:hover {
-    background: #f3f2ef;
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 /* Modal */
@@ -647,7 +707,8 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
     z-index: 2000;
     align-items: center;
     justify-content: center;
@@ -655,15 +716,18 @@ body {
 
 .modal.active {
     display: flex;
+    animation: fadeIn 0.3s ease;
 }
 
 .modal-content {
-    background: white;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 16px;
     width: 90%;
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .scale-in {
@@ -684,10 +748,15 @@ body {
 
 .modal-header {
     padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.modal-header h3 {
+    color: #60a5fa;
+    font-size: 1.5rem;
 }
 
 .modal-header button {
@@ -695,7 +764,13 @@ body {
     border: none;
     font-size: 28px;
     cursor: pointer;
-    color: #666;
+    color: #94a3b8;
+    transition: all 0.2s ease;
+}
+
+.modal-header button:hover {
+    color: #60a5fa;
+    transform: rotate(90deg);
 }
 
 .modal-content form {
@@ -706,26 +781,46 @@ body {
 .modal-content textarea,
 .modal-content select {
     width: 100%;
-    padding: 12px;
+    padding: 12px 15px;
     margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.6);
+    color: white;
     font-family: inherit;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-content input::placeholder,
+.modal-content textarea::placeholder {
+    color: #64748b;
 }
 
 .file-upload {
-    border: 2px dashed #ccc;
-    border-radius: 8px;
-    padding: 24px;
+    border: 2px dashed rgba(59, 130, 246, 0.3);
+    border-radius: 12px;
+    padding: 30px;
     text-align: center;
     cursor: pointer;
     margin-bottom: 15px;
-    transition: all 0.2s;
+    background: rgba(15, 23, 42, 0.4);
+    transition: all 0.3s ease;
 }
 
 .file-upload:hover {
-    border-color: #0a66c2;
-    background: #f3f6f9;
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .file-upload span {
@@ -735,10 +830,12 @@ body {
 .file-upload p {
     margin: 10px 0 5px;
     font-weight: 600;
+    color: #cbd5e1;
 }
 
 .file-upload small {
-    color: #0a66c2;
+    color: #60a5fa;
+    font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {

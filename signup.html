@@ -225,15 +225,20 @@
         <a href="index.html" class="back-link">← Back to Home</a>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
+    <script src="supabase-config.js"></script>
 
     <script>
-        // Initialize Firebase
-        initializeFirebase();
+        // Wait for Supabase SDK to load
+        window.addEventListener('load', function () {
+            if (typeof window.supabase === 'undefined') {
+                console.error('❌ Supabase SDK failed to load!');
+                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
+                return;
+            }
+            initializeSupabase();
+        });
 
         // Form submission
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
@@ -290,57 +295,37 @@
             signupBtn.textContent = 'Creating Account...';
 
             try {
-                // Create user with Firebase Authentication
-                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-
-                // Check if there's an existing team with this roll number
-                let existingTeamId = null;
-                let existingTeamName = null;
-
-                const teamsSnapshot = await firebase.firestore().collection('teams').get();
-                teamsSnapshot.forEach(doc => {
-                    const teamData = doc.data();
-                    if (teamData.members && Array.isArray(teamData.members)) {
-                        const rollNumbers = teamData.members.map(m => m.rollNo ? m.rollNo.toUpperCase() : '');
-                        if (rollNumbers.includes(rollNo)) {
-                            existingTeamId = doc.id;
-                            existingTeamName = teamData.teamName;
+                // Create user with Supabase Authentication
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: name,
+                            roll_no: rollNo
                         }
                     }
                 });
 
-                // Save user profile to Firestore
-                await firebase.firestore().collection('users').doc(user.uid).set({
-                    name: name,
-                    email: email,
-                    rollNo: rollNo,
-                    teamId: existingTeamId,
-                    teamName: existingTeamName,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                if (authError) throw authError;
 
-                // If user was added to existing team, update the team document
-                if (existingTeamId) {
-                    const teamRef = firebase.firestore().collection('teams').doc(existingTeamId);
-                    const teamDoc = await teamRef.get();
-                    if (teamDoc.exists) {
-                        const members = teamDoc.data().members || [];
-                        // Update the member with this roll number to include userId
-                        const updatedMembers = members.map(m => {
-                            if (m.rollNo && m.rollNo.toUpperCase() === rollNo) {
-                                return { ...m, userId: user.uid, name: name };
-                            }
-                            return m;
-                        });
-                        await teamRef.update({ members: updatedMembers });
-                    }
-                }
+                const user = authData.user;
+
+                // Save user profile to database
+                const { error: profileError } = await supabase
+                    .from('users')
+                    .insert({
+                        id: user.id,
+                        email: email,
+                        full_name: name,
+                        profile_photo_url: null,
+                        bio: null
+                    });
+
+                if (profileError) throw profileError;
 
                 // Show success message
-                document.getElementById('successMsg').textContent = existingTeamId
-                    ? `✓ Account created! You've been added to team "${existingTeamName}". Redirecting...`
-                    : '✓ Account created successfully! Redirecting to login...';
+                document.getElementById('successMsg').textContent = '✓ Account created successfully! Redirecting to login...';
 
                 // Redirect to login after 2 seconds
                 setTimeout(() => {
@@ -353,11 +338,11 @@
                 signupBtn.textContent = 'Create Account';
 
                 // Handle specific errors
-                if (error.code === 'auth/email-already-in-use') {
+                if (error.message.includes('already registered') || error.message.includes('already been registered')) {
                     document.getElementById('email-error').textContent = 'Email already registered. Please login.';
-                } else if (error.code === 'auth/invalid-email') {
+                } else if (error.message.includes('Invalid email')) {
                     document.getElementById('email-error').textContent = 'Invalid email format.';
-                } else if (error.code === 'auth/weak-password') {
+                } else if (error.message.includes('Password')) {
                     document.getElementById('password-error').textContent = 'Password is too weak.';
                 } else {
                     alert('Signup failed: ' + error.message);

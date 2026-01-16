@@ -194,12 +194,18 @@
         <a href="index.html" class="back-link">← Back to Home</a>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
+    <script src="supabase-config.js"></script>
     <script>
-        initializeFirebase();
+        // Wait for Supabase SDK to load
+        window.addEventListener('load', function () {
+            if (typeof window.supabase === 'undefined') {
+                console.error('❌ Supabase SDK failed to load!');
+                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
+                return;
+            }
+            initializeSupabase();
+        });
 
         // Toggle password visibility
         function togglePassword(inputId, button) {
@@ -224,7 +230,12 @@
             loginBtn.textContent = 'Logging in...';
 
             try {
-                await firebase.auth().signInWithEmailAndPassword(email, password);
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
 
                 // Save to localStorage
                 localStorage.setItem('student_email', email);
@@ -236,10 +247,10 @@
                 loginBtn.disabled = false;
                 loginBtn.textContent = 'Login';
 
-                if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/user-not-found') {
-                    alert('❌ No account found with this email.\n\n✅ Please sign up first.');
-                } else if (error.code === 'auth/wrong-password') {
-                    alert('❌ Incorrect password. Please try again.');
+                if (error.message.includes('Invalid login credentials')) {
+                    alert('❌ Invalid email or password.\n\n✅ Please check your credentials or sign up.');
+                } else if (error.message.includes('Email not confirmed')) {
+                    alert('❌ Please confirm your email address first.');
                 } else {
                     alert('❌ Login failed: ' + error.message);
                 }
