@@ -244,10 +244,34 @@
                 document.getElementById('projectCount').textContent = projectCount || 0;
 
                 // Load Team Count and Name
+                // First check if user is a member of any team by Roll No
+                let creatorId = user.id;
+                let teamName = null;
+                let myRollNo = user.user_metadata?.roll_no || (userData ? userData.roll_no : '') || '';
+
+                // If roll no not in metadata, try to get from userData if we fetched it, or just use what we have
+                // Note: userData was fetched above.
+
+                // 1. Check if I am a member (added by someone else)
+                if (myRollNo) {
+                    const { data: memberTeam, error: memberError } = await supabase
+                        .from('team_members')
+                        .select('user_id, team_name')
+                        .eq('roll_no', myRollNo)
+                        .maybeSingle(); // Use maybeSingle to avoid error if not found
+
+                    if (memberTeam) {
+                        creatorId = memberTeam.user_id; // The creator of the team I am in
+                        teamName = memberTeam.team_name;
+                    }
+                }
+
+                // 2. Fetch all members of the team (whether I created it or am just a member)
+                // If I wasn't found by roll_no, creatorId remains my user.id, so it checks if I created a team.
                 const { data: teamMembers, error: teamError } = await supabase
                     .from('team_members')
                     .select('team_name')
-                    .eq('user_id', user.id);
+                    .eq('user_id', creatorId);
 
                 if (!teamError && teamMembers && teamMembers.length > 0) {
                     document.getElementById('teamCount').textContent = teamMembers.length;

@@ -250,11 +250,27 @@
 
                 const user = session.user;
 
-                // Load team members for this user
+                // Check if user is a member of any team by Roll No (or is the creator)
+                let creatorId = user.id;
+                const myRollNo = user.user_metadata?.roll_no || '';
+
+                if (myRollNo) {
+                    const { data: memberTeam } = await supabase
+                        .from('team_members')
+                        .select('user_id')
+                        .eq('roll_no', myRollNo)
+                        .maybeSingle();
+
+                    if (memberTeam) {
+                        creatorId = memberTeam.user_id;
+                    }
+                }
+
+                // Load team members based on the identify Creator ID
                 const { data: teamMembers, error: teamError } = await supabase
                     .from('team_members')
                     .select('*')
-                    .eq('user_id', user.id)
+                    .eq('user_id', creatorId)
                     .order('created_at', { ascending: true });
 
                 if (teamError) {
