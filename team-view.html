@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Team - TeamConnect</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/png" href="logo.png">
     <style>
         body {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -182,7 +183,7 @@
         <div class="nav-container">
             <img src="logo.png" alt="TeamConnect" class="nav-logo">
             <div class="nav-search">
-                <span>🔍</span>
+                <span>ðŸ”</span>
                 <input type="text" placeholder="Search projects...">
             </div>
             <div class="nav-items">
@@ -216,80 +217,83 @@
         </div>
 
         <div style="text-align: center;">
-            <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+            <a href="dashboard.html" class="back-btn">â† Back to Dashboard</a>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
+    <script src="supabase-config.js"></script>
     <script>
-        initializeFirebase();
-
-        firebase.auth().onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
+        // Wait for Supabase SDK to load
+        window.addEventListener('load', function () {
+            if (typeof window.supabase === 'undefined') {
+                console.error('âŒ Supabase SDK failed to load!');
+                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
                 return;
             }
+            initializeSupabase();
+            loadTeamData();
+        });
 
+        async function loadTeamData() {
             const container = document.getElementById('teamContent');
             container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Loading team...</p>';
 
             try {
-                // Get user's team ID
-                const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
-                const userData = userDoc.data();
-                let teamId = userData.teamId;
+                // Check authentication
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-                // If no teamId in user doc, check if user created a team
-                if (!teamId) {
-                    const teamDoc = await firebase.firestore().collection('teams').doc(user.uid).get();
-                    if (teamDoc.exists) {
-                        teamId = user.uid;
-                    }
+                if (sessionError || !session) {
+                    window.location.href = 'login.html';
+                    return;
                 }
 
-                if (!teamId) {
+                const user = session.user;
+
+                // Load team members for this user
+                const { data: teamMembers, error: teamError } = await supabase
+                    .from('team_members')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: true });
+
+                if (teamError) {
+                    console.error('Team load error:', teamError);
+                    throw teamError;
+                }
+
+                if (!teamMembers || teamMembers.length === 0) {
                     // No team found
                     container.innerHTML = `
-                        <div class="no-team">
-                            <h2>You're Not in a Team Yet</h2>
-                            <p>Create a team or wait to be added to one!</p>
-                            <a href="team-details.html" class="create-team-btn">Create Team</a>
-                        </div>
-                    `;
+    <div class="no-team">
+        <h2>You're Not in a Team Yet</h2>
+        <p>Create a team to get started!</p>
+        <a href="team-details.html" class="create-team-btn">Create Team</a>
+    </div>
+    `;
                     return;
                 }
 
-                // Load team data
-                const teamDoc = await firebase.firestore().collection('teams').doc(teamId).get();
-                if (!teamDoc.exists) {
-                    container.innerHTML = '<p style="text-align:center; color:#f87171;">Team not found.</p>';
-                    return;
-                }
-
-                const teamData = teamDoc.data();
-                const members = teamData.members || [];
+                // Get team name from first member
+                const teamName = teamMembers[0].team_name || 'My Team';
 
                 let html = `
-                    <div class="team-header">
-                        <h1>${teamData.teamName || 'My Team'}</h1>
-                        <p>${members.length} Member${members.length !== 1 ? 's' : ''}</p>
-                    </div>
-                    <div class="members-grid">
-                `;
+    <div class="team-header">
+        <h1>${teamName}</h1>
+        <p>${teamMembers.length} Member${teamMembers.length !== 1 ? 's' : ''}</p>
+    </div>
+    <div class="members-grid">
+        `;
 
-                members.forEach(member => {
-                    const initials = (member.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                teamMembers.forEach(member => {
+                    const initials = (member.member_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
                     html += `
-                        <div class="member-card">
-                            <div class="member-avatar">${initials}</div>
-                            <div class="member-name">${member.name || 'Unknown'}</div>
-                            <div class="member-roll">${member.rollNo || member.roll || 'No Roll No'}</div>
-                            <div class="member-gender">${member.gender || 'Not specified'}</div>
-                        </div>
-                    `;
+        <div class="member-card">
+            <div class="member-avatar">${initials}</div>
+            <div class="member-name">${member.member_name || 'Unknown'}</div>
+            <div class="member-roll">${member.roll_no || 'No Roll No'}</div>
+        </div>
+        `;
                 });
 
                 html += '</div>';
@@ -297,14 +301,15 @@
 
             } catch (error) {
                 console.error('Error loading team:', error);
-                container.innerHTML = '<p style="text-align:center; color:#f87171;">Error loading team data.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#f87171;">Error loading team data. Please try again.</p>';
             }
-        });
+        }
 
+        // Logout handler
         document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
             if (confirm('Logout?')) {
-                await firebase.auth().signOut();
+                await supabase.auth.signOut();
                 localStorage.clear();
                 window.location.href = 'index.html';
             }

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Team Details - TeamConnect</title>
+    <link rel="icon" type="image/png" href="logo.png">
 
     <style>
         * {
@@ -214,12 +215,17 @@
         <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
+    <script src="supabase-config.js"></script>
     <script>
-        initializeFirebase();
+        window.addEventListener('load', function () {
+            if (typeof window.supabase === 'undefined') {
+                console.error('❌ Supabase SDK failed to load!');
+                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
+                return;
+            }
+            initializeSupabase();
+        });
 
         function generateMemberFields() {
             const count = parseInt(document.getElementById('memberCount').value);
@@ -237,12 +243,6 @@
                     <input type="text" id="memberName${i}" placeholder="Full Name" required>
                     <label>Roll Number</label>
                     <input type="text" id="memberRoll${i}" placeholder="Roll Number" required>
-                    <label>Gender</label>
-                    <select id="memberGender${i}" required>
-                        <option value="">Select Gender</option>
-                        <option>Male</option>
-                        <option>Female</option>
-                    </select>
                 `;
                 container.appendChild(memberDiv);
             }
@@ -258,8 +258,7 @@
             for (let i = 1; i <= count; i++) {
                 members.push({
                     name: document.getElementById(`memberName${i}`).value,
-                    rollNo: document.getElementById(`memberRoll${i}`).value.toUpperCase(),
-                    gender: document.getElementById(`memberGender${i}`).value
+                    rollNo: document.getElementById(`memberRoll${i}`).value.toUpperCase()
                 });
             }
 
@@ -267,33 +266,53 @@
             btn.textContent = 'Saving...';
 
             try {
-                const user = firebase.auth().currentUser;
-                if (!user) {
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) {
                     alert('You must be logged in to save team details.');
                     window.location.href = 'login.html';
                     return;
                 }
 
-                // Save to Firestore
-                await firebase.firestore().collection('teams').doc(user.uid).set({
-                    userId: user.uid,
-                    teamName: teamName,
-                    members: members,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                // Save team name to localStorage
+                localStorage.setItem('team_name', teamName);
+
+                // First, delete existing team members for this user
+                await supabase
+                    .from('team_members')
+                    .delete()
+                    .eq('user_id', user.id);
+
+                // Insert new team members
+                const teamMembersData = members.map(member => ({
+                    user_id: user.id,
+                    team_name: teamName,
+                    member_name: member.name,
+                    roll_no: member.rollNo
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('team_members')
+                    .insert(teamMembersData);
+
+                if (insertError) throw insertError;
 
                 alert('✓ Team details saved successfully!');
                 window.location.href = 'dashboard.html';
             } catch (error) {
+                console.error('Error saving team:', error);
                 alert('Error saving team: ' + error.message);
                 btn.disabled = false;
                 btn.textContent = 'Proceed to Dashboard';
             }
         });
 
-        firebase.auth().onAuthStateChanged(user => {
-            if (!user) window.location.href = 'login.html';
-        });
+        // Check authentication on page load
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+            }
+        })();
     </script>
 </body>
 

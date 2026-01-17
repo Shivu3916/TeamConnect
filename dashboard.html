@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - TeamConnect</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/png" href="logo.png">
 </head>
 
 <body class="dark-theme">
@@ -13,7 +14,7 @@
         <div class="nav-container">
             <img src="logo.png" alt="TeamConnect" class="nav-logo">
             <div class="nav-search">
-                <span>🔍</span>
+                <span>&#128269;</span>
                 <input type="text" placeholder="Search projects...">
             </div>
             <div class="nav-items">
@@ -162,35 +163,33 @@
     <script src="supabase-config.js"></script>
     <script>
         // Wait for Supabase SDK to load
-        window.addEventListener('load', function () {
+        window.addEventListener('load', async function () {
             if (typeof window.supabase === 'undefined') {
                 console.error('❌ Supabase SDK failed to load!');
                 alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
                 return;
             }
             initializeSupabase();
-        });
 
-        // Check Auth
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (!session) {
-                window.location.href = 'login.html';
-            } else {
-                loadProfile(session.user);
-                loadFeed();
-            }
-        });
+            // Check Auth
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (!session) {
+                    window.location.href = 'login.html';
+                } else {
+                    loadProfile(session.user);
+                    loadFeed(session.user);
+                }
+            });
 
-        // Initial check
-        (async () => {
+            // Initial check
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 window.location.href = 'login.html';
             } else {
                 loadProfile(session.user);
-                loadFeed();
+                loadFeed(session.user);
             }
-        })();
+        });
 
         async function loadProfile(user) {
             try {
@@ -202,7 +201,13 @@
 
                 if (!userError && userData) {
                     document.getElementById('userName').textContent = userData.full_name;
-                    document.getElementById('userRollNo').textContent = userData.email;
+
+                    // Display Roll No from Auth Metadata if available, else Email
+                    if (user.user_metadata && user.user_metadata.roll_no) {
+                        document.getElementById('userRollNo').textContent = user.user_metadata.roll_no;
+                    } else {
+                        document.getElementById('userRollNo').textContent = userData.email;
+                    }
 
                     // Display bio
                     const bioEl = document.getElementById('userBio');
@@ -232,32 +237,32 @@
                 }
 
                 // Load Project Count
-                const { data: projects, error: projectsError } = await supabase
+                const { count: projectCount } = await supabase
                     .from('projects')
                     .select('*', { count: 'exact', head: true })
                     .eq('user_id', user.id);
+                document.getElementById('projectCount').textContent = projectCount || 0;
 
-                if (!projectsError) {
-                    const { count } = await supabase
-                        .from('projects')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('user_id', user.id);
-                    document.getElementById('projectCount').textContent = count || 0;
-                }
-
-                // Load Team Count (count team_members where user_id matches)
-                const { count: teamMemberCount } = await supabase
+                // Load Team Count and Name
+                const { data: teamMembers, error: teamError } = await supabase
                     .from('team_members')
-                    .select('*', { count: 'exact', head: true })
+                    .select('team_name')
                     .eq('user_id', user.id);
 
-                document.getElementById('teamCount').textContent = teamMemberCount || 0;
+                if (!teamError && teamMembers && teamMembers.length > 0) {
+                    document.getElementById('teamCount').textContent = teamMembers.length;
+                    // Update localStorage with real team name
+                    localStorage.setItem('team_name', teamMembers[0].team_name);
+                } else {
+                    document.getElementById('teamCount').textContent = 0;
+                    localStorage.removeItem('team_name'); // Clear if no team
+                }
             } catch (e) {
                 console.error(e);
             }
         }
 
-        async function loadFeed() {
+        async function loadFeed(user) {
             const container = document.getElementById('feedPosts');
             container.innerHTML = '<p class="loading">Loading projects...</p>';
 
@@ -298,6 +303,15 @@
                                 <span style="font-size:12px; color:#94a3b8;">${project.team_name || 'Team'} • ${project.user_section || ''}</span>
                             </div>
                         </div>
+                        ${project.user_id === user.id ? `
+                        <div class="menu-container" style="position: relative;">
+                            <button onclick="toggleMenu(event, '${project.id}')" style="background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer; padding:0 8px;">⋮</button>
+                            <div id="menu-${project.id}" class="menu-dropdown" style="display:none; position:absolute; right:0; top:30px; background:#1e293b; border:1px solid #3b82f6; border-radius:8px; z-index:10; width:120px; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+                                <button onclick="deleteProject('${project.id}')" style="width:100%; padding:10px; text-align:left; background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px; font-weight:600;">🗑️ Delete</button>
+                            </div>
+                        </div>
+                        ` : ''}
+                        </div>
                         <h3 style="margin-bottom:8px; color:#60a5fa;">${project.title}</h3>
                         <p style="color:#cbd5e1; margin-bottom:12px;">${project.description}</p>
                         ${project.logo_url ? `<img src="${project.logo_url}" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
@@ -319,9 +333,45 @@
                 });
             } catch (e) {
                 console.error(e);
-                container.innerHTML = '<p>Error loading feed.</p>';
+                container.innerHTML = `<p style="color:#f87171; text-align:center;">Error loading feed: ${e.message || 'Unknown error'}</p>`;
             }
         }
+
+        // Menu Functions
+        function toggleMenu(event, id) {
+            event.stopPropagation();
+            const menu = document.getElementById(`menu-${id}`);
+            // Close all others
+            document.querySelectorAll('.menu-dropdown').forEach(m => {
+                if (m.id !== `menu-${id}`) m.style.display = 'none';
+            });
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function deleteProject(id) {
+            if (!confirm('Are you sure you want to delete this project?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('projects')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                alert('Project deleted successfully');
+                const { data: { user } } = await supabase.auth.getUser();
+                loadFeed(user); // Refresh feed with user
+            } catch (error) {
+                console.error('Error deleting project:', error);
+                alert('Error deleting project: ' + error.message);
+            }
+        }
+
+        // Close menus when clicking outside
+        window.addEventListener('click', () => {
+            document.querySelectorAll('.menu-dropdown').forEach(m => m.style.display = 'none');
+        });
 
         // Modal Logic
         function openModal() { document.getElementById('uploadModal').classList.add('active'); }

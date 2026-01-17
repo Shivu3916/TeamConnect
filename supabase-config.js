@@ -1,12 +1,19 @@
 // Supabase Configuration for TeamConnect
 // Replace these with your actual Supabase credentials
-const SUPABASE_URL = 'https://fainvcebtqayamgbll.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhaW52Y2VidHFheWFtZ2JsbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzY4NTY4NzAzLCJleHAiOjIwODQxNDQ3MDN9.vBVX_-yz6ROj9Xj6dKI5DVzXpEQfNlBwVwBY3h5AcVg';
+const SUPABASE_URL = 'https://rfainvcebtqayaimgbll.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmYWludmNlYnRxYXlhaW1nYmxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1Njg3MDMsImV4cCI6MjA4NDE0NDcwM30.vBVX_-yz6ROj9Xj6dKI5DVzXpEQfNlBwVwBY3h5AcVg';
 
 // Initialize Supabase client
 let supabase;
 
 function initializeSupabase() {
+    if (supabase) return true; // Already initialized
+
+    if (typeof window.supabase === 'undefined') {
+        console.error("❌ Supabase SDK not loaded yet.");
+        return false;
+    }
+
     try {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log("✅ Supabase initialized successfully");

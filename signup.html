@@ -230,15 +230,15 @@
     <script src="supabase-config.js"></script>
 
     <script>
-        // Wait for Supabase SDK to load
-        window.addEventListener('load', function () {
-            if (typeof window.supabase === 'undefined') {
-                console.error('❌ Supabase SDK failed to load!');
-                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
-                return;
+        // Wait for Supabase SDK to load with timeout/retry
+        const initApp = () => {
+            if (typeof window.supabase !== 'undefined') {
+                initializeSupabase();
+            } else {
+                setTimeout(initApp, 100); // Retry every 100ms
             }
-            initializeSupabase();
-        });
+        };
+        window.addEventListener('load', initApp);
 
         // Form submission
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
@@ -340,12 +340,17 @@
                 // Handle specific errors
                 if (error.message.includes('already registered') || error.message.includes('already been registered')) {
                     document.getElementById('email-error').textContent = 'Email already registered. Please login.';
+                } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
+                    // User was created in auth but failed in database
+                    document.getElementById('email-error').textContent = 'Account exists. Please try logging in.';
                 } else if (error.message.includes('Invalid email')) {
                     document.getElementById('email-error').textContent = 'Invalid email format.';
                 } else if (error.message.includes('Password')) {
                     document.getElementById('password-error').textContent = 'Password is too weak.';
+                } else if (error.message.includes('violates row-level security')) {
+                    alert('⚠️ Database setup incomplete. Please contact administrator.\n\nError: Row Level Security policies not configured.');
                 } else {
-                    alert('Signup failed: ' + error.message);
+                    alert('❌ Signup failed: ' + error.message);
                 }
             }
         });

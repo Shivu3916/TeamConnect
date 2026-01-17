@@ -197,15 +197,15 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
     <script src="supabase-config.js"></script>
     <script>
-        // Wait for Supabase SDK to load
-        window.addEventListener('load', function () {
-            if (typeof window.supabase === 'undefined') {
-                console.error('❌ Supabase SDK failed to load!');
-                alert('Error: Unable to load Supabase. Please check your internet connection and refresh the page.');
-                return;
+        // Wait for Supabase SDK to load with timeout/retry
+        const initApp = () => {
+            if (typeof window.supabase !== 'undefined') {
+                initializeSupabase();
+            } else {
+                setTimeout(initApp, 100); // Retry every 100ms
             }
-            initializeSupabase();
-        });
+        };
+        window.addEventListener('load', initApp);
 
         // Toggle password visibility
         function togglePassword(inputId, button) {
