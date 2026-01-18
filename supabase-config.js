@@ -1,5 +1,5 @@
 // Supabase Configuration for TeamConnect
-// Replace these with your actual Supabase credentials
+
 const SUPABASE_URL = 'https://rfainvcebtqayaimgbll.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmYWludmNlYnRxYXlhaW1nYmxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1Njg3MDMsImV4cCI6MjA4NDE0NDcwM30.vBVX_-yz6ROj9Xj6dKI5DVzXpEQfNlBwVwBY3h5AcVg';
 
