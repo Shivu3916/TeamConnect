@@ -31,6 +31,13 @@
                             d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                     </svg>
                 </a>
+                <a href="contact.html" class="nav-item" title="Contact Us">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path
+                            d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                    </svg>
+                </a>
                 <a href="#" class="nav-item" id="logoutBtn" title="Logout">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                         fill="currentColor">
@@ -89,11 +96,12 @@
             <form id="uploadForm">
                 <input type="text" id="projectTitle" placeholder="Project Title" required>
                 <textarea id="projectDesc" placeholder="Description" required></textarea>
-                <div class="file-upload" onclick="document.getElementById('htmlFile').click()">
-                    <input type="file" id="htmlFile" accept=".html" required hidden>
+                <div class="file-upload" onclick="document.getElementById('projectFiles').click()">
+                    <input type="file" id="projectFiles" multiple
+                        accept=".html,.css,.js,.json,.txt,.md,.png,.jpg,.jpeg,.gif" required hidden>
                     <span>📄</span>
-                    <p>Upload HTML File</p>
-                    <small id="htmlFileName"></small>
+                    <p>Upload Project Files</p>
+                    <small id="filesListDisplay">No files selected</small>
                 </div>
                 <div class="file-upload" onclick="document.getElementById('logoFile').click()">
                     <input type="file" id="logoFile" accept="image/*" hidden>
@@ -338,11 +346,40 @@
                         </div>
                         <h3 style="margin-bottom:8px; color:#60a5fa;">${project.title}</h3>
                         <p style="color:#cbd5e1; margin-bottom:12px;">${project.description}</p>
+                        
+                        <!-- Files Display -->
+                        <div class="project-files">
+                            ${project.html_url ? `<a href="${project.html_url}" target="_blank" class="file-download-btn">📄 Main File</a>` : ''}
+                            <!-- We will load other files dynamically or from a joined query -->
+                        </div>
+
                         ${project.logo_url ? `<img src="${project.logo_url}" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
-                        <div class="post-actions-row" style="border-top:1px solid rgba(59, 130, 246, 0.2); padding-top:12px;">
-                            <button style="padding:10px 20px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; transition: all 0.3s ease;" onclick="window.open('${project.html_url}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">View Project</button>
+                        
+                        <div class="post-actions-row" style="border-top:1px solid rgba(59, 130, 246, 0.2); padding-top:12px; display:flex; gap:12px; flex-wrap:wrap;">
+                            <button style="flex:1; padding:10px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; transition: all 0.3s ease;" onclick="window.open('${project.html_url || '#'}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">View Project</button>
+                            
+                            <button class="action-btn" id="like-btn-${project.id}" onclick="toggleLike('${project.id}')">
+                                <span id="like-icon-${project.id}">🤍</span> <span id="like-count-${project.id}">0</span>
+                            </button>
+                            
+                            <button class="action-btn" onclick="toggleComments('${project.id}')">
+                                💬 Comment
+                            </button>
+                        </div>
+                        
+                        <div id="comments-${project.id}" class="comments-section">
+                            <div class="comment-input-area">
+                                <input type="text" id="comment-input-${project.id}" placeholder="Write a comment...">
+                                <button onclick="postComment('${project.id}')" style="background:#3b82f6; color:white; border:none; padding:0 16px; border-radius:20px; cursor:pointer;">➤</button>
+                            </div>
+                            <div id="comments-list-${project.id}" class="comments-list">
+                                <!-- Comments will load here -->
+                            </div>
                         </div>
                     `;
+
+                    // Load initial state for likes and comments
+                    loadProjectSocials(project.id, user.id);
 
                     card.addEventListener('mouseenter', () => {
                         card.style.transform = 'translateY(-4px)';
@@ -401,8 +438,17 @@
         function openModal() { document.getElementById('uploadModal').classList.add('active'); }
         function closeModal() { document.getElementById('uploadModal').classList.remove('active'); }
 
-        document.getElementById('htmlFile').addEventListener('change', e => {
-            document.getElementById('htmlFileName').textContent = e.target.files[0] ? `✓ ${e.target.files[0].name}` : '';
+        document.getElementById('projectFiles').addEventListener('change', e => {
+            const files = e.target.files;
+            const display = document.getElementById('filesListDisplay');
+            if (files.length > 0) {
+                let text = `✓ ${files.length} files selected: `;
+                text += Array.from(files).map(f => f.name).join(', ');
+                if (text.length > 50) text = text.substring(0, 50) + '...';
+                display.textContent = text;
+            } else {
+                display.textContent = 'No files selected';
+            }
         });
         document.getElementById('logoFile').addEventListener('change', e => {
             document.getElementById('logoFileName').textContent = e.target.files[0] ? `✓ ${e.target.files[0].name}` : '';
@@ -422,64 +468,45 @@
                 return;
             }
 
-            btn.disabled = true;
-            btn.textContent = 'Uploading...';
-            progressDiv.style.display = 'block';
-            progressBar.style.width = '0%';
-
-            const title = document.getElementById('projectTitle').value;
-            const desc = document.getElementById('projectDesc').value;
-            const hFile = document.getElementById('htmlFile').files[0];
-            const lFile = document.getElementById('logoFile').files[0];
-
             try {
-                // Upload HTML file
-                statusText.textContent = 'Uploading HTML file...';
-                progressBar.style.width = '20%';
+                btn.disabled = true;
+                btn.textContent = 'Uploading...';
+                progressDiv.style.display = 'block';
+                progressBar.style.width = '0%';
 
-                const htmlFileName = `${user.id}/${Date.now()}_${hFile.name}`;
-                const { data: htmlData, error: htmlError } = await supabase.storage
-                    .from('project-html')
-                    .upload(htmlFileName, hFile, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+                const title = document.getElementById('projectTitle').value;
+                const desc = document.getElementById('projectDesc').value;
+                // HTML File input removed
+                const lFile = document.getElementById('logoFile').files[0];
 
-                if (htmlError) throw htmlError;
+                let lUrl = ''; // Default empty if no logo
 
-                const { data: { publicUrl: hUrl } } = supabase.storage
-                    .from('project-html')
-                    .getPublicUrl(htmlFileName);
-
-                progressBar.style.width = '50%';
-
-                // Upload logo if provided
-                let lUrl = null;
+                // Upload Logo if exists
                 if (lFile) {
+                    const logoPath = `logos/${user.id}/${Date.now()}_${lFile.name}`;
                     statusText.textContent = 'Uploading logo...';
-                    progressBar.style.width = '60%';
 
-                    const logoFileName = `${user.id}/${Date.now()}_${lFile.name}`;
-                    const { data: logoData, error: logoError } = await supabase.storage
-                        .from('project-logos')
-                        .upload(logoFileName, lFile, {
-                            cacheControl: '3600',
-                            upsert: false
-                        });
+                    const { error: logoUploadError } = await supabase.storage
+                        .from('project-html') // Using project-html bucket as it is known to exist
+                        .upload(logoPath, lFile);
 
-                    if (logoError) throw logoError;
+                    if (logoUploadError) {
+                        // If we can't upload logo, maybe just warn and proceed? 
+                        // Or throw? Let's throw to be safe for now, or user might wonder where their logo is.
+                        throw new Error('Logo upload failed: ' + logoUploadError.message);
+                    }
 
                     const { data: { publicUrl } } = supabase.storage
-                        .from('project-logos')
-                        .getPublicUrl(logoFileName);
+                        .from('project-html')
+                        .getPublicUrl(logoPath);
 
                     lUrl = publicUrl;
                 }
-                progressBar.style.width = '80%';
 
-                // Save to database
                 statusText.textContent = 'Saving project details...';
-                const { error: dbError } = await supabase
+
+                // 1. Insert Project
+                const { data: projectData, error: dbError } = await supabase
                     .from('projects')
                     .insert({
                         user_id: user.id,
@@ -488,11 +515,59 @@
                         team_name: localStorage.getItem('team_name') || 'Team',
                         title: title,
                         description: desc,
-                        html_url: hUrl,
+                        html_url: '', // Will update later if needed, or keep empty if multiple files
                         logo_url: lUrl
-                    });
+                    })
+                    .select()
+                    .single();
 
                 if (dbError) throw dbError;
+
+                const projectId = projectData.id;
+
+                // 2. Upload Files
+                const files = document.getElementById('projectFiles').files;
+                let mainFileUrl = '';
+
+                // Create array of promises for file uploads
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    statusText.textContent = `Uploading file ${i + 1}/${files.length}: ${file.name}...`;
+                    const percent = 20 + Math.floor((i / files.length) * 60);
+                    progressBar.style.width = `${percent}%`;
+
+                    const filePath = `${user.id}/${Date.now()}_${file.name}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from('project-html')
+                        .upload(filePath, file);
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('project-html')
+                        .getPublicUrl(filePath);
+
+                    // If it's the first file, treat as main? Or just the first one uploaded
+                    if (i === 0) mainFileUrl = publicUrl;
+
+                    // Insert into project_files table if it exists
+                    // We try-catch this individually so it doesn't fail the whole upload if table missing
+                    try {
+                        await supabase.from('project_files').insert({
+                            project_id: projectId,
+                            file_name: file.name,
+                            file_url: publicUrl
+                        });
+                    } catch (e) {
+                        console.warn('Could not insert into project_files. Maybe table missing?', e);
+                    }
+                }
+
+                // Update project with main file URL
+                await supabase
+                    .from('projects')
+                    .update({ html_url: mainFileUrl })
+                    .eq('id', projectId);
 
                 progressBar.style.width = '100%';
                 statusText.textContent = 'Upload complete!';
@@ -502,7 +577,7 @@
 
                 // Reset form
                 document.getElementById('uploadForm').reset();
-                document.getElementById('htmlFileName').textContent = '';
+                document.getElementById('filesListDisplay').textContent = '';
                 document.getElementById('logoFileName').textContent = '';
 
                 closeModal();
@@ -696,6 +771,178 @@
                 window.location.href = 'index.html';
             }
         });
+    </script>
+    <script>
+        // ... (Previous script content remains, effectively reusing the existing script logic but appending the missing functions)
+
+        // Social Features: Likes and Comments
+        async function loadProjectSocials(projectId, userId) {
+            try {
+                // 1. Check if user liked the project
+                const { data: likeData } = await supabase
+                    .from('likes')
+                    .select('id')
+                    .eq('project_id', projectId)
+                    .eq('user_id', userId)
+                    .maybeSingle();
+
+                const likeBtn = document.getElementById(`like-btn-${projectId}`);
+                const likeIcon = document.getElementById(`like-icon-${projectId}`);
+                if (likeData) {
+                    likeBtn.classList.add('liked');
+                    likeIcon.textContent = '❤️';
+                } else {
+                    likeBtn.classList.remove('liked');
+                    likeIcon.textContent = '🤍';
+                }
+
+                // 2. Get Like Count
+                const { count: likeCount } = await supabase
+                    .from('likes')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('project_id', projectId);
+
+                document.getElementById(`like-count-${projectId}`).textContent = likeCount || 0;
+
+                // 3. Load Comments
+                // loadComments(projectId); // Optional: Load only when requested to save bandwidth
+            } catch (e) {
+                console.error("Error loading socials:", e);
+            }
+        }
+
+        async function toggleLike(projectId) {
+            const btn = document.getElementById(`like-btn-${projectId}`);
+            const icon = document.getElementById(`like-icon-${projectId}`);
+            const countEl = document.getElementById(`like-count-${projectId}`);
+            let currentCount = parseInt(countEl.textContent);
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Please login to like projects');
+                return;
+            }
+
+            try {
+                if (btn.classList.contains('liked')) {
+                    // Unlike
+                    const { error } = await supabase
+                        .from('likes')
+                        .delete()
+                        .eq('project_id', projectId)
+                        .eq('user_id', user.id);
+
+                    if (error) throw error;
+
+                    btn.classList.remove('liked');
+                    icon.textContent = '🤍';
+                    countEl.textContent = Math.max(0, currentCount - 1);
+                } else {
+                    // Like
+                    const { error } = await supabase
+                        .from('likes')
+                        .insert({ project_id: projectId, user_id: user.id });
+
+                    if (error) throw error;
+
+                    btn.classList.add('liked');
+                    icon.textContent = '❤️';
+                    countEl.textContent = currentCount + 1;
+                }
+            } catch (e) {
+                console.error("Error toggling like:", e);
+                alert("Failed to update like");
+            }
+        }
+
+        function toggleComments(projectId) {
+            const section = document.getElementById(`comments-${projectId}`);
+            if (section.style.display === 'block') {
+                section.style.display = 'none';
+            } else {
+                section.style.display = 'block';
+                loadComments(projectId);
+            }
+        }
+
+        async function loadComments(projectId) {
+            const list = document.getElementById(`comments-list-${projectId}`);
+            list.innerHTML = '<p style="color:#94a3b8; font-size:12px;">Loading comments...</p>';
+
+            try {
+                // Fetch comments with user details if possible, or just raw
+                // Assuming we might not have a join, we select raw and maybe fetch user names?
+                // For simplicity, let's assume 'user_name' is stored in comments or we accept generic names
+                const { data: comments, error } = await supabase
+                    .from('comments')
+                    .select('*')
+                    .eq('project_id', projectId)
+                    .order('created_at', { ascending: true });
+
+                if (error) throw error;
+
+                list.innerHTML = '';
+                if (!comments || comments.length === 0) {
+                    list.innerHTML = '<p style="color:#94a3b8; font-size:12px;">No comments yet.</p>';
+                    return;
+                }
+
+                comments.forEach(comment => {
+                    const div = document.createElement('div');
+                    div.className = 'comment-item';
+                    const initial = (comment.user_name || 'U')[0].toUpperCase();
+                    div.innerHTML = `
+                        <div class="comment-avatar">${initial}</div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-author">${comment.user_name || 'User'}</span>
+                                <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <div class="comment-text">${comment.content}</div>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (e) {
+                console.error("Error loading comments:", e);
+                list.innerHTML = '<p style="color:#ef4444; font-size:12px;">Error loading comments</p>';
+            }
+        }
+
+        async function postComment(projectId) {
+            const input = document.getElementById(`comment-input-${projectId}`);
+            const content = input.value.trim();
+            if (!content) return;
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Please login to comment');
+                return;
+            }
+
+            try {
+                // Optimistic update? Or wait? Let's wait.
+                // We need user name to store if we want to avoid complex joins
+                let userName = localStorage.getItem('student_name') || 'User';
+
+                const { error } = await supabase
+                    .from('comments')
+                    .insert({
+                        project_id: projectId,
+                        user_id: user.id,
+                        user_name: userName,
+                        content: content
+                    });
+
+                if (error) throw error;
+
+                input.value = '';
+                loadComments(projectId); // Reload to show new
+            } catch (e) {
+                console.error("Error posting comment:", e);
+                alert("Failed to post comment");
+            }
+        }
     </script>
 </body>
 
